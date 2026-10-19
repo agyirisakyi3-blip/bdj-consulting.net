@@ -2,6 +2,7 @@
 
 # Pas de listing de répertoire
 Options -Indexes
+DirectoryIndex index.html
 
 # Headers de sécurité (always = appliqués aussi aux réponses 4xx/5xx)
 <IfModule mod_headers.c>
@@ -9,7 +10,7 @@ Options -Indexes
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://connect.facebook.net https://analytics.tiktok.com https://snap.licdn.com https://static.ads-twitter.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://images.pexels.com https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://t.co https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com; font-src 'self'; connect-src 'self' https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net; form-action 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; upgrade-insecure-requests"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://connect.facebook.net https://analytics.tiktok.com https://snap.licdn.com https://static.ads-twitter.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://images.pexels.com https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://t.co https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com; font-src 'self'; connect-src 'self' https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net; form-action 'self'; base-uri 'self'; frame-src 'self' https://www.openstreetmap.org; frame-ancestors 'self'; object-src 'none'; upgrade-insecure-requests"
   # HSTS : à conserver uniquement si le site est bien servi en HTTPS.
   # Ajouter "; includeSubDomains" seulement si TOUS les sous-domaines ont un HTTPS valide.
   Header always set Strict-Transport-Security "max-age=31536000"
@@ -17,6 +18,10 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # Domaine canonique : rediriger www vers le domaine principal sans www.
+  RewriteCond %{HTTP_HOST} ^www\.bdj-consulting\.net$ [NC]
+  RewriteRule ^ https://bdj-consulting.net%{REQUEST_URI} [R=301,L]
 
   # Forcer HTTPS : protège les données des formulaires (dont les CV) en transit
   RewriteCond %{HTTPS} !=on

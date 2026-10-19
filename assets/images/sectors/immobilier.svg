@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 780 460">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#123a54"/><stop offset="1" stop-color="#071b29"/></linearGradient><radialGradient id="r" cx="65%" cy="25%" r="70%"><stop offset="0" stop-color="#7d9eb1" stop-opacity=".45"/><stop offset="1" stop-color="#123a54" stop-opacity="0"/></radialGradient></defs>
+<rect width="780" height="460" fill="url(#g)"/><rect width="780" height="460" fill="url(#r)"/>
+<g opacity=".16" stroke="#fff" stroke-width="1"><path d="M40 0V460"/><path d="M80 0V460"/><path d="M120 0V460"/><path d="M160 0V460"/><path d="M200 0V460"/><path d="M240 0V460"/><path d="M280 0V460"/><path d="M320 0V460"/><path d="M360 0V460"/><path d="M400 0V460"/><path d="M440 0V460"/><path d="M480 0V460"/><path d="M520 0V460"/><path d="M560 0V460"/><path d="M600 0V460"/><path d="M640 0V460"/><path d="M680 0V460"/><path d="M720 0V460"/><path d="M760 0V460"/><path d="M0 40H780"/><path d="M0 80H780"/><path d="M0 120H780"/><path d="M0 160H780"/><path d="M0 200H780"/><path d="M0 240H780"/><path d="M0 280H780"/><path d="M0 320H780"/><path d="M0 360H780"/><path d="M0 400H780"/><path d="M0 440H780"/></g>
+<g transform="translate(0,0)"><path d="M220 430V155h150v275M370 215h190v215M250 195h70M250 245h70M250 295h70M250 345h70M415 255h95M415 305h95M415 355h95" fill="none" stroke="#dce8ef" stroke-width="16"/></g>
+<text x="42" y="405" fill="#fff" font-family="Arial, sans-serif" font-size="30" font-weight="700">Immobilier</text>
+</svg>

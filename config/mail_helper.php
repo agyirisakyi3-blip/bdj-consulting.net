@@ -4,9 +4,8 @@ declare(strict_types=1);
 /*
  * BDJ Consulting — Envoi d'e-mails
  *
- * Envoie via PHPMailer + SMTP (IONOS) dès que la librairie est présente et
- * qu'un identifiant + mot de passe SMTP sont configurés. Sinon, repli sur
- * mail() (comportement historique) pour ne jamais casser le site.
+ * Envoie via PHPMailer + le transport mail local de l'hébergement IONOS.
+ * Aucun identifiant ou mot de passe SMTP n'est stocké dans le site.
  *
  * Installation de PHPMailer (au choix) :
  *   - Composer :  composer require phpmailer/phpmailer   (utilise vendor/autoload.php)
@@ -52,86 +51,151 @@ function bdj_send_mail(
     string $text,
     string $replyEmail = '',
     string $replyName = '',
-    array $attachments = []
+    array $attachments = [],
+    string $html = '',
+    array $embeddedImages = []
 ): array {
     global $bdj_phpmailer_loaded;
 
-    $smtp = is_array($config['smtp'] ?? null) ? $config['smtp'] : [];
-    $token = trim((string)($smtp['token'] ?? ''));
-    $username = trim((string)($smtp['username'] ?? ''));
-    $password = (string)($smtp['password'] ?? '');
-    if ($token !== '') $username = $token; // compatibilité Postmark (token en guise d'identifiant)
+    if (!$bdj_phpmailer_loaded) {
+        return [
+            'ok' => false,
+            'error' => 'PHPMailer est indisponible sur le serveur.',
+        ];
+    }
 
-    // Prêt si un identifiant est fourni avec un mot de passe (IONOS)
-    // ou un token (Postmark, sans mot de passe).
-    $smtpReady = $bdj_phpmailer_loaded && $username !== '' && ($password !== '' || $token !== '');
+    try {
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
-    if ($smtpReady) {
-        try {
-            $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host       = $smtp['host'] ?? 'smtp.ionos.com';
-            $mail->Port       = (int)($smtp['port'] ?? 587);
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $username;
-            $mail->Password   = $password;
-            $mail->SMTPSecure = $smtp['encryption'] ?? 'tls';
-            $mail->CharSet    = 'UTF-8';
-            $mail->Encoding   = 'base64';
+        // IONOS Web Hosting fournit un transport mail local pour les scripts
+        // PHP. L'adresse From appartient au domaine du site.
+        $mail->isMail();
 
-            $mail->setFrom($config['from'], $config['from_name'] ?? 'BDJ Consulting');
-            if ($replyEmail !== '') $mail->addReplyTo($replyEmail, $replyName !== '' ? $replyName : $replyEmail);
-            foreach ($to as $dest) $mail->addAddress($dest);
-            $mail->Subject = $subject;
+        $mail->CharSet = 'UTF-8';
+        $mail->Encoding = 'base64';
+        $mail->setFrom((string)$config['from'], (string)($config['from_name'] ?? 'BDJ Consulting'));
+
+        if ($replyEmail !== '') {
+            $mail->addReplyTo($replyEmail, $replyName !== '' ? $replyName : $replyEmail);
+        }
+
+        foreach ($to as $dest) {
+            if (filter_var($dest, FILTER_VALIDATE_EMAIL)) {
+                $mail->addAddress($dest);
+            }
+        }
+
+        if (count($mail->getToAddresses()) === 0) {
+            return ['ok' => false, 'error' => 'Aucun destinataire valide configuré.'];
+        }
+
+        $mail->Subject = $subject;
+        if ($html !== '') {
+            $mail->isHTML(true);
+            $mail->Body = $html;
+            $mail->AltBody = $text;
+
+            foreach ($embeddedImages as $image) {
+                if (!isset($image['path'], $image['cid']) || !is_file((string)$image['path'])) {
+                    continue;
+                }
+                $mail->addEmbeddedImage(
+                    (string)$image['path'],
+                    (string)$image['cid'],
+                    (string)($image['name'] ?? basename((string)$image['path'])),
+                    'base64',
+                    (string)($image['mime'] ?? 'image/png')
+                );
+            }
+        } else {
             $mail->isHTML(false);
             $mail->Body = $text;
-            foreach ($attachments as $a) {
-                $mail->addStringAttachment((string)file_get_contents($a['path']), $a['name'], 'base64', $a['mime']);
-            }
-            $mail->send();
-            return ['ok' => true, 'error' => ''];
-        } catch (Throwable $e) {
-            return ['ok' => false, 'error' => $e->getMessage()];
         }
+
+        foreach ($attachments as $a) {
+            if (!isset($a['path']) || !is_file((string)$a['path'])) {
+                return ['ok' => false, 'error' => 'Pièce jointe introuvable.'];
+            }
+            $content = file_get_contents((string)$a['path']);
+            if ($content === false) {
+                return ['ok' => false, 'error' => 'Impossible de lire la pièce jointe.'];
+            }
+            $mail->addStringAttachment(
+                $content,
+                (string)$a['name'],
+                'base64',
+                (string)($a['mime'] ?? 'application/octet-stream')
+            );
+        }
+
+        $mail->send();
+        return ['ok' => true, 'error' => ''];
+    } catch (Throwable $e) {
+        error_log('BDJ Mail error: ' . $e->getMessage());
+        return [
+            'ok' => false,
+            'error' => 'Le serveur e-mail IONOS n’a pas accepté l’envoi.',
+        ];
     }
+}
 
-    // --- Repli : mail() ---
-    $fromEmail = $config['from'];
-    $primary = array_shift($to);
-    if ($primary === null) return ['ok' => false, 'error' => 'Aucun destinataire configuré.'];
-
-    $headers  = "From: " . ($config['from_name'] ?? 'BDJ Consulting') . " <$fromEmail>\r\n";
-    if ($replyEmail !== '') $headers .= "Reply-To: $replyEmail\r\n";
-    if ($to) $headers .= "Bcc: " . implode(', ', $to) . "\r\n"; // co-destinataires cachés entre eux
-    $headers .= "X-Mailer: BDJ Consulting Website\r\n";
-
-    if (!$attachments) {
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "Content-Transfer-Encoding: 8bit\r\n";
-        $ok = @mail($primary, $subject, $text, $headers);
-        return ['ok' => $ok, 'error' => $ok ? '' : 'mail() a échoué'];
+/**
+ * Charge les modèles d'e-mails dynamiques configurables.
+ */
+function bdj_email_templates(): array
+{
+    static $templates = null;
+    if ($templates === null) {
+        $file = __DIR__ . '/email_templates.php';
+        $templates = is_file($file) ? require $file : [];
+        if (!is_array($templates)) $templates = [];
     }
+    return $templates;
+}
 
-    $boundary = md5((string)microtime(true));
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\r\n";
-
-    $body = "--$boundary\r\n";
-    $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $body .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
-    $body .= $text . "\r\n";
-    foreach ($attachments as $a) {
-        $body .= "--$boundary\r\n";
-        $body .= "Content-Type: {$a['mime']}; name=\"{$a['name']}\"\r\n";
-        $body .= "Content-Disposition: attachment; filename=\"{$a['name']}\"\r\n";
-        $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-        $body .= chunk_split(base64_encode((string)file_get_contents($a['path']))) . "\r\n";
+/**
+ * Remplace les variables {{nom}} dans un modèle texte ou HTML.
+ * Les valeurs HTML sont échappées pour éviter l'injection dans les e-mails.
+ */
+function bdj_render_email_template(string $template, array $vars, bool $html = false): string
+{
+    foreach ($vars as $key => $value) {
+        $value = (string)$value;
+        $replacement = $html
+            ? htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            : $value;
+        $template = str_replace('{{' . $key . '}}', $replacement, $template);
     }
-    $body .= "--$boundary--\r\n";
+    return $template;
+}
 
-    $ok = @mail($primary, $subject, $body, $headers);
-    return ['ok' => $ok, 'error' => $ok ? '' : 'mail() a échoué'];
+/**
+ * Construit les paramètres de marque pour l'image logo embarquée.
+ */
+function bdj_email_branding(): array
+{
+    $templates = bdj_email_templates();
+    $branding = is_array($templates['branding'] ?? null) ? $templates['branding'] : [];
+    $logoPath = (string)($branding['logo_path'] ?? '');
+    $logoCid = (string)($branding['logo_cid'] ?? 'bdj-logo');
+
+    return [
+        'logo_path' => $logoPath,
+        'logo_cid' => $logoCid,
+        'slogan' => (string)($branding['slogan'] ?? 'Glad to be one of them.'),
+    ];
+}
+
+/**
+ * Ajoute la signature visuelle BDJ Consulting avec le logo en bas de l'e-mail.
+ */
+function bdj_email_footer_html(string $siteName, string $contactEmail, string $phone, string $cid, string $slogan): string
+{
+    return '<div style="margin-top:34px;padding-top:22px;border-top:1px solid #e5e7eb;text-align:center;">'
+        . '<img src="cid:' . htmlspecialchars($cid, ENT_QUOTES, 'UTF-8') . '" alt="' . htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8') . '" width="250" style="display:block;width:250px;max-width:80%;height:auto;margin:0 auto 12px;border:0;">'
+        . '<div style="font-size:12px;color:#6b7280;">' . htmlspecialchars($slogan, ENT_QUOTES, 'UTF-8') . '</div>'
+        . '<div style="font-size:12px;color:#6b7280;margin-top:5px;">' . htmlspecialchars($contactEmail, ENT_QUOTES, 'UTF-8') . ' · ' . htmlspecialchars($phone, ENT_QUOTES, 'UTF-8') . '</div>'
+        . '</div>';
 }
 
 /**

@@ -15,6 +15,137 @@ document.addEventListener("DOMContentLoaded", () => {
     inp.value = String(Math.floor(Date.now() / 1000));
   });
 
+
+  // Production forms: AJAX submission with a branded success popup.
+  document.querySelectorAll('form[data-bdj-ajax="success-popup"]').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!form.reportValidity()) return;
+
+      const submit = form.querySelector('button[type="submit"]');
+      const originalLabel = submit ? submit.innerHTML : '';
+      if (submit) {
+        submit.disabled = true;
+        submit.classList.add('bdj-form-submit-loading');
+        submit.innerHTML = 'Envoi en cours…';
+      }
+
+      const ts = form.querySelector('input[name="ts"]');
+      if (ts) ts.value = String(Math.floor(Date.now() / 1000));
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json, text/html;q=0.9'
+          },
+          credentials: 'same-origin'
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        const raw = await response.text();
+        let payload = null;
+        if (contentType.includes('application/json')) {
+          try { payload = JSON.parse(raw); } catch (_) {}
+        }
+
+        if (!response.ok || (payload && payload.ok === false)) {
+          let message = (payload && payload.message) || 'Votre demande n\'a pas pu être envoyée. Merci de vérifier les informations saisies et de réessayer.';
+          if (!payload) {
+            try {
+              const doc = new DOMParser().parseFromString(raw, 'text/html');
+              const list = [...doc.querySelectorAll('li')].map(el => el.textContent.trim()).filter(Boolean);
+              const paragraph = doc.querySelector('.notice p');
+              if (list.length) message = list.join(' ');
+              else if (paragraph && paragraph.textContent.trim()) message = paragraph.textContent.trim();
+            } catch (_) {}
+          }
+          showBdjFormError(message, form);
+          return;
+        }
+
+        const successTitle = (payload && payload.title) || form.dataset.successTitle || 'Votre demande a été envoyée avec succès !';
+        const successMessage = (payload && payload.message) || form.dataset.successMessage || 'Votre demande a bien été transmise à BDJ Consulting. Un e-mail de confirmation a été envoyé à votre adresse e-mail.';
+        showBdjFormSuccess(successTitle, successMessage, () => {
+          form.reset();
+          if (ts) ts.value = String(Math.floor(Date.now() / 1000));
+          const anchor = form.closest('section[id]');
+          if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } catch (_) {
+        showBdjFormError('Une erreur technique est survenue. Vérifiez votre connexion puis réessayez.', form);
+      } finally {
+        if (submit) {
+          submit.disabled = false;
+          submit.classList.remove('bdj-form-submit-loading');
+          submit.innerHTML = originalLabel;
+        }
+      }
+    });
+  });
+
+  function showBdjFormSuccess(title, message, onClose) {
+    const old = document.getElementById('bdj-form-success-modal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'bdj-form-success-modal';
+    modal.className = 'bdj-form-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'bdj-form-success-title');
+    modal.innerHTML = `
+      <div class="bdj-form-modal__card">
+        <div class="bdj-form-modal__icon" aria-hidden="true">✓</div>
+        <h2 class="bdj-form-modal__title" id="bdj-form-success-title"></h2>
+        <p class="bdj-form-modal__message"></p>
+        <button type="button" class="bdj-form-modal__close">Fermer</button>
+        <div class="bdj-form-modal__progress" aria-hidden="true"><span></span></div>
+      </div>`;
+    modal.querySelector('.bdj-form-modal__title').textContent = title;
+    modal.querySelector('.bdj-form-modal__message').textContent = message;
+    document.body.appendChild(modal);
+
+    const close = () => {
+      modal.classList.remove('is-visible');
+      window.setTimeout(() => {
+        modal.remove();
+        if (typeof onClose === 'function') onClose();
+      }, 220);
+    };
+    modal.querySelector('.bdj-form-modal__close').addEventListener('click', close);
+    modal.addEventListener('click', (ev) => { if (ev.target === modal) close(); });
+    document.addEventListener('keydown', function esc(ev){
+      if (ev.key === 'Escape') {
+        close();
+        document.removeEventListener('keydown', esc);
+      }
+    }, { once: true });
+
+    requestAnimationFrame(() => modal.classList.add('is-visible'));
+    window.setTimeout(() => {
+      if (document.body.contains(modal)) close();
+    }, 4000);
+  }
+
+  function showBdjFormError(message, sourceForm) {
+    const old = document.getElementById('bdj-form-error-message');
+    if (old) old.remove();
+    const box = document.createElement('div');
+    box.id = 'bdj-form-error-message';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'margin:0 0 18px;padding:14px 16px;border-radius:10px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;line-height:1.5;font-weight:600;';
+    box.textContent = message;
+    const form = sourceForm || document.querySelector('form[data-bdj-ajax="success-popup"]');
+    if (form) {
+      form.parentNode.insertBefore(box, form);
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   document.querySelectorAll("form[data-demo]").forEach(form => {
     form.addEventListener("submit", e => {
       e.preventDefault();

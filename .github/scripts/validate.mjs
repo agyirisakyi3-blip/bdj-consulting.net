@@ -35,7 +35,7 @@ if (sitemap && !/<\/urlset>/.test(sitemap)) {
 
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 for (const u of urls) {
-  const path = u.replace(/^https:\/\/www\.bdj-consulting\.net\//, '').split('#')[0];
+  const path = u.replace(/^https:\/\/(?:www\.)?bdj-consulting\.net\//, '').split('#')[0];
   const local = path === '' ? 'index.html' : path;
   if (!existsSync(local)) {
     bad++;

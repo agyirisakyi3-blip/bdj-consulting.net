@@ -3,7 +3,7 @@
 Site vitrine statique du centre de relation client **BDJ Consulting**, basé à Abidjan (Côte d'Ivoire).
 11 pages HTML + 2 handlers PHP (`send_contact.php`, `send_recruitment.php`), sans framework.
 
-Visuel : https://www.bdj-consulting.net/
+Visuel : https://bdj-consulting.net/
 
 ---
 
@@ -13,8 +13,8 @@ Visuel : https://www.bdj-consulting.net/
 - **Widget WhatsApp** : bouton flottant, badge, horaires, assistant qui répond aux questions courantes avant tout transfert vers un conseiller (`wa.me/2250102440707`)
 - **Réseaux sociaux** en pied de page : Facebook, Instagram, X, TikTok, LinkedIn, YouTube (`bdjconsulting`)
 - **Formulaires opérationnels** :
-  - Contact → 2 destinataires
-  - Recrutement → 2 destinataires + CV (PDF/DOC/DOCX, max 5 Mo)
+  - Contact → 2 destinataires + accusé de réception automatique au visiteur
+  - Recrutement → 2 destinataires + CV (PDF/DOC/DOCX, max 5 Mo) + accusé de réception automatique au candidat
 - **SEO complet** : titles/descriptions/canonicals uniques, Open Graph + Twitter Card, JSON-LD (`ProfessionalService`, `WebSite`, `ContactPage`, `BreadcrumbList` ×6), sitemap.xml, robots.txt
 - **SEO local** : NAP unifié (`+225 01 02 44 07 07`), géolocalisation, zone de service Abidjan / Côte d'Ivoire
 - **Bandeau cookies** + politique de confidentialité
@@ -44,16 +44,7 @@ Visuel : https://www.bdj-consulting.net/
 `config/config.php` et `config/mail_config.php` **ne sont pas versionnés** (secrets). Ils doivent être
 recréés sur l'hébergement. Le dossier `config/` référence le modèle dans `CONFIGURATION_EMAIL.md`.
 
-Envoi intelligent via `config/mail_helper.php` :
-
-1. **PHPMailer présent + identifiant/mot de passe configurés** → envoi SMTP (IONOS) avec pièces jointes fiables.
-2. **Sinon** → repli sur la fonction PHP `mail()` (comportement historique, pas de blocage).
-
-Brancher IONOS :
-1. Créer les boîtes dans le panneau IONOS (ex. `no-reply@`, `contact@`, `rh@`, `recrutement@`, `commercial@bdj-consulting.net`)
-2. Installer PHPMailer : `composer require phpmailer/phpmailer` **ou** déposer `PHPMailer/src/` dans `assets/lib/phpmailer/`
-3. Renseigner `'username'` + `'password'` dans `config/mail_config.php` ou définir `IONOS_SMTP_PASSWORD` (env var, recommandé)
-4. IONOS : `smtp.ionos.com:587` (STARTTLS) ou `:465` (SSL) — IMAP `imap.ionos.com:993`
+Envoi via le transport mail local IONOS avec `config/mail_helper.php` et PHPMailer. Aucun mot de passe SMTP n'est stocké dans le site.
 
 ## Sécurité
 
@@ -69,7 +60,7 @@ Brancher IONOS :
 2. Recréer `config/config.php` + `config/mail_config.php` (modèles dans `CONFIGURATION_*.md`)
 3. Adresse définitive renseignée (Faya Palace, Cocody, Abidjan) dans `config.php` + JSON-LD (`address`, `openingHoursSpecification`) sur toutes les pages
 4. Brancher IONOS SMTP + PHPMailer (voir ci-dessus)
-5. Vérifier : réception des 2 destinataires pour chaque formulaire
+5. Vérifier : réception des 2 destinataires pour chaque formulaire + réception de l'accusé automatique sur l'adresse saisie dans le formulaire
 6. Valider HTTPS + headers (avec CSP) + Google Business Profile (NAP identique)
 7. Soumettre sitemap.xml dans Google Search Console
 
