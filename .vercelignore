@@ -1,0 +1,23 @@
+# Vercel ne sert que des fichiers statiques (pas de PHP).
+# On exclut donc toute la logique serveur, les secrets et la config Apache.
+# Le dossier .git n'est jamais televerse par Vercel.
+
+config/
+vendor/
+assets/lib/phpmailer/
+
+send_contact.php
+send_recruitment.php
+.htaccess
+
+composer.json
+composer.lock
+
+.github/
+
+*.md
+*.log
+*.sql
+*.bak
+*.old
+bdj-deploy.zip

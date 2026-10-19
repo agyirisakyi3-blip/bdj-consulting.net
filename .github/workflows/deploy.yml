@@ -57,3 +57,6 @@ jobs:
             **/config/config.php
             **/config/mail_config.php
             **/bdj-deploy.zip
+            **/vercel.json
+            **/.vercelignore
+            **/.vercel

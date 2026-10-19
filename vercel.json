@@ -1,0 +1,42 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.bdj-consulting.net" }],
+      "destination": "https://bdj-consulting.net/$1",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/send_contact.php",
+      "destination": "https://bdj-consulting.net/send_contact.php"
+    },
+    {
+      "source": "/send_recruitment.php",
+      "destination": "https://bdj-consulting.net/send_recruitment.php"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://connect.facebook.net https://analytics.tiktok.com https://snap.licdn.com https://static.ads-twitter.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.unsplash.com https://images.pexels.com https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://t.co https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com; font-src 'self'; connect-src 'self' https://www.facebook.com https://analytics.tiktok.com https://px.ads.linkedin.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net; form-action 'self'; base-uri 'self'; frame-src 'self' https://www.openstreetmap.org; frame-ancestors 'self'; object-src 'none'; upgrade-insecure-requests"
+        },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": ".*\\.vercel\\.app" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ]
+}
